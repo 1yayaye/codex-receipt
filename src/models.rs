@@ -19,6 +19,8 @@ pub enum OutputFormat {
 #[derive(Debug, Clone, Serialize)]
 pub struct UsageSnapshot {
     pub input_tokens: u64,
+    /// 最近一次请求占用的输入上下文 token，用于展示上下文窗口占用。
+    pub context_input_tokens: u64,
     pub cached_input_tokens: u64,
     pub output_tokens: u64,
     pub reasoning_output_tokens: u64,
@@ -59,7 +61,8 @@ pub struct PricingTable {
 
 #[derive(Debug, Deserialize)]
 pub struct PricingEntry {
-    pub provider: String,
+    #[serde(rename = "provider")]
+    pub _provider: String,
     pub model: String,
     #[serde(default)]
     pub aliases: Vec<String>,
@@ -90,7 +93,7 @@ pub fn fmt_int(value: u64) -> String {
     out.chars().rev().collect()
 }
 
-/// 生成用于 provider/model 匹配的宽松键。
+/// 生成用于模型名和别名匹配的宽松键。
 ///
 /// 只保留 ASCII 字母数字并转小写，让 `gpt-5.4` 和 `GPT 5.4` 能匹配到同一项。
 pub fn normalize_key(value: &str) -> String {

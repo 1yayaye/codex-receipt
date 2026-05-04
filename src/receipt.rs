@@ -20,6 +20,7 @@ pub struct ReceiptView {
 
 /// 构建小票视图模型。
 ///
+/// `date` 表示小票生成时间；日志里的 `token_count` 时间作为“统计时间”摘要行保留。
 /// 根据日志里实际出现的 token 字段决定展示行，并保留未知价格的诚实回退。
 pub fn build_receipt_view(
     snapshot: &UsageSnapshot,
@@ -52,12 +53,8 @@ pub fn build_receipt_view(
         width,
         title: "CODEX 小票".to_string(),
         receipt_id: receipt_id.clone(),
-        date: display_time(snapshot.timestamp.as_deref()),
-        summary_rows: vec![
-            ("供应商".to_string(), snapshot.provider.to_uppercase()),
-            ("模型".to_string(), snapshot.model.clone()),
-            ("已用上下文".to_string(), context_used(snapshot)),
-        ],
+        date: generated_time(),
+        summary_rows: summary_rows(snapshot),
         token_rows,
         total_row: (
             "总计".to_string(),
@@ -71,6 +68,20 @@ pub fn build_receipt_view(
 
 fn has_field(snapshot: &UsageSnapshot, field: &str) -> bool {
     snapshot.available_fields.iter().any(|item| item == field)
+}
+
+fn summary_rows(snapshot: &UsageSnapshot) -> Vec<(String, String)> {
+    let mut rows = vec![
+        ("供应商".to_string(), snapshot.provider.to_uppercase()),
+        ("模型".to_string(), snapshot.model.clone()),
+        ("已用上下文".to_string(), context_used(snapshot)),
+    ];
+
+    if let Some(time) = display_time(snapshot.timestamp.as_deref()) {
+        rows.push(("统计时间".to_string(), time));
+    }
+
+    rows
 }
 
 fn receipt_id(snapshot: &UsageSnapshot) -> String {
@@ -91,7 +102,11 @@ fn stable_digest(seed: &str) -> String {
     format!("{:06X}", hash & 0xFF_FFFF)
 }
 
-fn display_time(value: Option<&str>) -> String {
+fn generated_time() -> String {
+    Local::now().format("%Y-%m-%d %H:%M:%S").to_string()
+}
+
+fn display_time(value: Option<&str>) -> Option<String> {
     value
         .and_then(|text| DateTime::parse_from_rfc3339(text).ok())
         .map(|dt| {
@@ -99,13 +114,16 @@ fn display_time(value: Option<&str>) -> String {
                 .format("%Y-%m-%d %H:%M:%S")
                 .to_string()
         })
-        .unwrap_or_else(|| Local::now().format("%Y-%m-%d %H:%M:%S").to_string())
 }
 
 fn context_used(snapshot: &UsageSnapshot) -> String {
     match snapshot.context_window {
-        Some(window) => format!("{}/{}", fmt_int(snapshot.input_tokens), fmt_int(window)),
-        None => fmt_int(snapshot.input_tokens),
+        Some(window) => format!(
+            "{}/{}",
+            fmt_int(snapshot.context_input_tokens),
+            fmt_int(window)
+        ),
+        None => fmt_int(snapshot.context_input_tokens),
     }
 }
 
@@ -161,4 +179,51 @@ fn barcode(seed: &str, width: usize) -> String {
         bars.push_str(piece);
     }
     bars
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::models::UsageSnapshot;
+    use std::path::PathBuf;
+
+    #[test]
+    fn receipt_date_is_generated_time_and_stat_time_is_separate() {
+        let snapshot = UsageSnapshot {
+            input_tokens: 100,
+            context_input_tokens: 100,
+            cached_input_tokens: 0,
+            output_tokens: 20,
+            reasoning_output_tokens: 0,
+            total_tokens: 120,
+            context_window: None,
+            provider: "openai".to_string(),
+            model: "gpt-5.4".to_string(),
+            source: PathBuf::from("tests/fixtures/codex-session.jsonl"),
+            session_id: "fixture-session".to_string(),
+            timestamp: Some("2026-05-04T01:00:02Z".to_string()),
+            scope: "latest-turn".to_string(),
+            available_fields: vec![
+                "input_tokens".to_string(),
+                "output_tokens".to_string(),
+                "total_tokens".to_string(),
+            ],
+        };
+        let estimate = PriceEstimate {
+            status: PriceStatus::Unmapped,
+            amount: None,
+            currency: "USD".to_string(),
+            model: "价格未映射".to_string(),
+            source_checked_at: Some("2026-05-04".to_string()),
+            rate_note: None,
+        };
+
+        let view = build_receipt_view(&snapshot, &estimate, 48);
+
+        assert_ne!(view.date, "2026-05-04 09:00:02");
+        assert!(view
+            .summary_rows
+            .iter()
+            .any(|(label, value)| label == "统计时间" && value == "2026-05-04 09:00:02"));
+    }
 }

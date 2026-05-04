@@ -1,4 +1,4 @@
-//! 负责加载静态价格表、匹配 provider/model/alias，并估算费用。
+//! 负责加载静态价格表、按模型名或别名匹配价格，并估算费用。
 //! 本模块不读取 Codex 日志，也不决定小票展示字段。
 
 use crate::models::{
@@ -19,7 +19,7 @@ pub fn estimate_cost(snapshot: &UsageSnapshot, pricing_path: &Path) -> Result<Pr
     let table = load_pricing(pricing_path)?;
     let currency = table.currency.clone().unwrap_or_else(|| "USD".to_string());
     let unit = table.unit.as_deref().unwrap_or("per_1m_tokens");
-    let Some(entry) = find_price(&table, &snapshot.provider, &snapshot.model) else {
+    let Some(entry) = find_price(&table, &snapshot.model) else {
         return Ok(PriceEstimate {
             status: PriceStatus::Unmapped,
             amount: None,
@@ -56,21 +56,15 @@ fn load_pricing(path: &Path) -> Result<PricingTable> {
     serde_json::from_str(&text).with_context(|| format!("无法解析价格表 {}", path.display()))
 }
 
-fn find_price<'a>(
-    table: &'a PricingTable,
-    provider: &str,
-    model: &str,
-) -> Option<&'a PricingEntry> {
-    let provider_key = normalize_key(provider);
+fn find_price<'a>(table: &'a PricingTable, model: &str) -> Option<&'a PricingEntry> {
     let model_key = normalize_key(model);
 
     table.models.iter().find(|entry| {
-        normalize_key(&entry.provider) == provider_key
-            && (normalize_key(&entry.model) == model_key
-                || entry
-                    .aliases
-                    .iter()
-                    .any(|alias| normalize_key(alias) == model_key))
+        normalize_key(&entry.model) == model_key
+            || entry
+                .aliases
+                .iter()
+                .any(|alias| normalize_key(alias) == model_key)
     })
 }
 

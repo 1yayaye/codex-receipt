@@ -1,0 +1,24 @@
+[package]
+name = "codex-receipt"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+description = "Print Codex token usage as a Chinese receipt"
+repository = "https://github.com/OWNER/codex-receipt"
+
+[[bin]]
+name = "codex-receipt"
+path = "src/main.rs"
+
+[dependencies]
+anyhow = "1"
+chrono = { version = "0.4", default-features = false, features = ["clock", "serde"] }
+clap = { version = "4", features = ["derive"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+unicode-width = "0.2"
+
+[dev-dependencies]
+assert_cmd = "2"
+predicates = "3"
+tempfile = "3"

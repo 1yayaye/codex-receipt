@@ -1,0 +1,2 @@
+{"timestamp":"2026-05-04T01:00:00Z","type":"session_meta","payload":{"id":"missing-model","timestamp":"2026-05-04T00:58:00Z","model_provider":"openai"}}
+{"timestamp":"2026-05-04T01:00:02Z","type":"event_msg","payload":{"type":"token_count","info":{"last_token_usage":{"input_tokens":100,"output_tokens":20,"total_tokens":120}}}}

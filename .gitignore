@@ -1,0 +1,17 @@
+AGENTS.md
+
+# Rust build output
+/target/
+
+# Local helper scripts
+/start.bat
+
+# Logs and temporary files
+*.log
+*.tmp
+
+# OS and editor files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

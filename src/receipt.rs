@@ -218,12 +218,13 @@ mod tests {
             rate_note: None,
         };
 
+        let expected_stat_time = display_time(snapshot.timestamp.as_deref()).unwrap();
         let view = build_receipt_view(&snapshot, &estimate, 48);
 
-        assert_ne!(view.date, "2026-05-04 09:00:02");
+        assert_ne!(view.date, expected_stat_time);
         assert!(view
             .summary_rows
             .iter()
-            .any(|(label, value)| label == "统计时间" && value == "2026-05-04 09:00:02"));
+            .any(|(label, value)| label == "统计时间" && value == &expected_stat_time));
     }
 }

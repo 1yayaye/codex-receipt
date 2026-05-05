@@ -39,7 +39,7 @@ fn open_path(path: &Path) -> Result<()> {
         if status.success() {
             return Ok(());
         }
-        return Err(anyhow!("打开小票失败: {}", path.display()));
+        Err(anyhow!("打开小票失败: {}", path.display()))
     }
 
     #[cfg(all(unix, not(target_os = "macos")))]
@@ -48,6 +48,6 @@ fn open_path(path: &Path) -> Result<()> {
         if status.success() {
             return Ok(());
         }
-        return Err(anyhow!("打开小票失败: {}", path.display()));
+        Err(anyhow!("打开小票失败: {}", path.display()))
     }
 }
